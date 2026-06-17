@@ -25,7 +25,7 @@
         <div class="host-name">
           <span class="prompt">root@</span>
           <span v-if="server.country && server.country !== 'xx'">
-            <img :src="'https://flagcdn.com/24x18/' + server.country.toLowerCase() + '.png'" :alt="server.country" class="flag-img" style="margin-right:6px;">
+            <img :src="'https://flagcdn.com/24x18/' + getFlagCountryCode(server.country) + '.png'" :alt="server.country" class="flag-img" style="margin-right:6px;">
           </span>
           <span v-else>🏳️</span>
           <span>{{ server.name || 'Loading...' }}</span>
@@ -244,7 +244,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import TerminalHeader from '../components/TerminalHeader.vue'
 import Footer from '../components/Footer.vue'
-import { fetchServerDetail, fetchAllHistory, formatBytes, fetchConfig, isAdminLoggedIn, createLiveSocket } from '../utils/api.js'
+import { fetchServerDetail, fetchAllHistory, formatBytes, fetchConfig, isAdminLoggedIn, createLiveSocket, getFlagCountryCode } from '../utils/api.js'
 import Chart from 'chart.js/auto'
 import 'chartjs-adapter-date-fns'
 import { currentLang, translations } from '../utils/i18n'

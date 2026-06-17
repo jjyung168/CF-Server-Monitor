@@ -138,7 +138,7 @@
                   <td>
                     <div class="server-info">
                       <span v-if="server.country && server.country !== 'xx'">
-                        <img :src="'https://flagcdn.com/24x18/' + server.country.toLowerCase() + '.png'" :alt="server.country" class="flag-img">
+                        <img :src="'https://flagcdn.com/24x18/' + getFlagCountryCode(server.country) + '.png'" :alt="server.country" class="flag-img">
                       </span>
                       <span v-else>🏳️</span>
                       <a :href="'/server/' + server.id" class="server-name-link">{{ server.name }}</a>
@@ -685,7 +685,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import TerminalHeader from '../components/TerminalHeader.vue'
 import Footer from '../components/Footer.vue'
-import { adminApi, login, logout as apiLogout, formatBytes, upgradeDatabase, rebuildDatabase } from '../utils/api'
+import { adminApi, login, logout as apiLogout, formatBytes, upgradeDatabase, rebuildDatabase, getFlagCountryCode } from '../utils/api'
 import { t, currentLang } from '../utils/i18n'
 import { translations } from '../utils/i18n'
 

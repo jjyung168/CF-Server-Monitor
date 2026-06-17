@@ -26,18 +26,17 @@
         </div>
       </div>
       <div class="filter-bar" id="ajax-filters">
-        <span 
-          v-for="(count, code) in filterOptions" 
+        <span
+          v-for="(count, code) in filterOptions"
           :key="code"
           class="filter-tag"
-          :class="{ active: currentFilter === code }"
+          :class="{ active: currentFilter === code, 'filter-tag-unknown': code === 'unknown' }"
           :data-filter="code"
           @click="setFilter(code)"
         >
-          <span v-if="code !== 'all'">
-            <img v-if="code !== 'all'" :src="'https://flagcdn.com/16x12/' + (code || 'xx').toLowerCase() + '.png'" :alt="code">
-          </span>
-          {{ code === 'all' ? '[' + trans.all + ']' : code.toUpperCase() }} {{ count }}
+          <span v-if="code === 'unknown'" class="filter-tag-icon">🏳️</span>
+          <img v-else-if="code !== 'all'" :src="'https://flagcdn.com/16x12/' + getFlagCountryCode(code) + '.png'" :alt="code">
+          {{ code === 'all' ? '[' + trans.all + ']' : code === 'unknown' ? 'UNKNOWN' : code.toUpperCase() }} {{ count }}
         </span>
       </div>
     </div>
@@ -130,7 +129,7 @@
               <td><b>{{ server.name }}</b></td>
               <td>
                 <span v-if="server.country && server.country !== 'xx'">
-                  <img :src="'https://flagcdn.com/24x18/' + server.country.toLowerCase() + '.png'" :alt="server.country" class="flag-img">
+                  <img :src="'https://flagcdn.com/24x18/' + getFlagCountryCode(server.country) + '.png'" :alt="server.country" class="flag-img">
                 </span>
                 <span v-else>🏳️</span>
                 {{ (server.country || 'XX').toUpperCase() }}
@@ -193,13 +192,14 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import TerminalHeader from '../components/TerminalHeader.vue'
 import ServerCard from '../components/ServerCard.vue'
 import Footer from '../components/Footer.vue'
-import { fetchServers, formatBytes, createLiveSocket } from '../utils/api.js'
+import { fetchServers, formatBytes, createLiveSocket, getFlagCountryCode } from '../utils/api.js'
 import { t, currentLang } from '../utils/i18n.js'
 import { translations } from '../utils/i18n.js'
 import { TIME } from '../utils/constants'
 
 const servers = ref([])
 const stats = ref({ total: '-', online: 0, offline: 0, globalNetRx: 0, globalNetTx: 0, globalSpeedIn: 0, globalSpeedOut: 0 })
+const unknownStats = ref(0)
 const sysConfig = ref({
   show_price: true,
   show_expire: true,
@@ -219,15 +219,23 @@ const trans = computed(() => translations[currentLang.value] || translations.en)
 const filterOptions = computed(() => {
   const normalizedStats = {}
   for (const code in countryStats.value) {
-    normalizedStats[code.toLowerCase()] = countryStats.value[code]
+    const lower = code.toLowerCase()
+    if (lower === 'xx') continue
+    normalizedStats[lower] = countryStats.value[code]
   }
-  return { all: stats.value.total, ...normalizedStats }
+  const opts = { all: stats.value.total, ...normalizedStats }
+  if (unknownStats.value > 0) opts.unknown = unknownStats.value
+  return opts
 })
 
 const groupedServers = computed(() => {
   const groups = {}
   const order = []
-  const filteredList = currentFilter.value === 'all' ? servers.value : servers.value.filter(s => (s.country || 'xx').toLowerCase() === currentFilter.value)
+  const filteredList = currentFilter.value === 'all'
+    ? servers.value
+    : currentFilter.value === 'unknown'
+      ? servers.value.filter(s => !s.country)
+      : servers.value.filter(s => (s.country || 'xx').toLowerCase() === currentFilter.value)
   filteredList.forEach(server => {
     const groupName = server.server_group || 'Default'
     if (!groups[groupName]) {
@@ -241,6 +249,7 @@ const groupedServers = computed(() => {
 
 const filteredServers = computed(() => {
   if (currentFilter.value === 'all') return servers.value
+  if (currentFilter.value === 'unknown') return servers.value.filter(s => !s.country)
   return servers.value.filter(s => (s.country || 'xx').toLowerCase() === currentFilter.value)
 })
 
@@ -312,6 +321,7 @@ const recomputeStats = () => {
   let online = 0
   let speedIn = 0, speedOut = 0, netRx = 0, netTx = 0
   const countryCounts = {}
+  let unknownCount = 0
   for (const s of list) {
     const ts = new Date(s.last_updated || 0).getTime()
     const isOnline = ts && (now - ts) < TIME.ONLINE_THRESHOLD_MS
@@ -325,6 +335,8 @@ const recomputeStats = () => {
     if (s.country) {
       const key = String(s.country).toUpperCase()
       countryCounts[key] = (countryCounts[key] || 0) + 1
+    } else {
+      unknownCount++
     }
   }
   stats.value = {
@@ -337,6 +349,7 @@ const recomputeStats = () => {
     globalSpeedOut: speedOut
   }
   countryStats.value = countryCounts
+  unknownStats.value = unknownCount
 }
 
 const refreshData = async () => {
@@ -354,7 +367,20 @@ const refreshData = async () => {
     servers.value = nextList
 
     if (data.stats) stats.value = data.stats
-    if (data.countryStats) countryStats.value = data.countryStats
+    if (data.countryStats) {
+      const cleaned = {}
+      for (const code in data.countryStats) {
+        if (code.toLowerCase() === 'xx') continue
+        cleaned[code] = data.countryStats[code]
+      }
+      countryStats.value = cleaned
+    }
+    // 始终基于当前服务器列表计算未知国家数量（与 recomputeStats 保持一致）
+    let unknownCount = 0
+    for (const s of servers.value) {
+      if (!s.country) unknownCount++
+    }
+    unknownStats.value = unknownCount
 
     sysConfig.value = {
       show_price: data.sysConfig?.show_price ?? true,
@@ -485,7 +511,11 @@ const drawMarkers = () => {
   const colors = getThemeColors()
   const activeIso2 = {}
   for (const code in countryStats.value) {
-    activeIso2[code.toUpperCase()] = true
+    const upperCode = code.toUpperCase()
+    activeIso2[upperCode] = true
+    if (upperCode === 'HK' || upperCode === 'TW' || upperCode === 'MO') {
+      activeIso2['CN'] = true
+    }
   }
 
   geoJsonLayer = window.L.geoJSON(window.worldGeoJson, {

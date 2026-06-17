@@ -86,7 +86,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { formatBytes } from '../utils/api'
+import { formatBytes, getFlagCountryCode } from '../utils/api'
 import { t, currentLang } from '../utils/i18n'
 import { translations } from '../utils/i18n'
 import { TIME, PING } from '../utils/constants'
@@ -111,7 +111,7 @@ const trans = computed(() => translations[currentLang.value] || translations.en)
 
 const now = Date.now()
 
-const countryCode = computed(() => (props.server.country || 'xx').toLowerCase())
+const countryCode = computed(() => getFlagCountryCode(props.server.country))
 
 const isOnline = computed(() => {
   const lastUpdated = new Date(props.server.last_updated).getTime()

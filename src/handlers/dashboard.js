@@ -61,7 +61,6 @@ export async function handleServersAPI(request, env, sys) {
     globalNetTx += parseFloat(server.net_tx || 0);
     
     let cCode = (server.country || '').toUpperCase();
-    if (cCode === 'TW') cCode = 'CN';
     if (cCode !== '') {
       countryStats[cCode] = (countryStats[cCode] || 0) + 1;
     }

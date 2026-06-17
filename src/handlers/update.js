@@ -74,7 +74,7 @@ export async function handleUpdate(request, env, ctx) {
     }
 
     let countryCode = request.cf?.country || '';
-    if (countryCode.toUpperCase() === 'TW') countryCode = 'CN';
+    const upperCode = countryCode.toUpperCase();
 
     const serverExists = await checkServerExists(env.DB, id);
 

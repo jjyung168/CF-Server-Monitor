@@ -96,6 +96,12 @@ export const createLiveSocket = (subscribe, handlers = {}) => {
   }
 }
 
+export const getFlagCountryCode = (country) => {
+  const code = (country || '').toUpperCase()
+  if (code === 'TW' || code === 'HK' || code === 'MO') return 'cn'
+  return code.toLowerCase()
+}
+
 export const formatBytes = (bytes) => {
   bytes = parseFloat(bytes) || 0
   if (bytes === 0) return '0 B'

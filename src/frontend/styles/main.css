@@ -633,6 +633,16 @@ body::before {
     border-radius: 1px;
 }
 
+.filter-tag-unknown {
+    border-style: dashed;
+    opacity: 0.85;
+}
+
+.filter-tag-icon {
+    font-size: 13px;
+    line-height: 1;
+}
+
 /* --------------------------------------------------------------------------
    11. Stats Components
    -------------------------------------------------------------------------- */
